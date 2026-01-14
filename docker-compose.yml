@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6-alpine
+    container_name: log-analytics-mongo
+    environment:
+      MONGO_INITDB_DATABASE: log-analytics
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.adminCommand("ping")' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: log-analytics-app
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://mongodb:27017/log-analytics
+      MONGODB_POOL_SIZE: 10
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/app/src
+    command: npm run dev
+
+volumes:
+  mongodb_data:
+
+networks:
+  default:
+    name: log-analytics-network
